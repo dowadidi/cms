@@ -36,6 +36,11 @@ class Site extends Model
     public $groupId;
 
     /**
+     * @var int|null Content parent ID
+     */
+    public $contentParentId;
+
+    /**
      * @var string|null Name
      */
     public $name;
@@ -145,7 +150,7 @@ class Site extends Model
     {
         $rules = parent::defineRules();
         $rules[] = [['groupId', 'name', 'handle', 'language'], 'required'];
-        $rules[] = [['id', 'groupId'], 'number', 'integerOnly' => true];
+        $rules[] = [['id', 'groupId', 'contentParentId'], 'number', 'integerOnly' => true];
         $rules[] = [['name', 'handle', 'baseUrl'], 'string', 'max' => 255];
         $rules[] = [['language'], LanguageValidator::class, 'onlySiteLanguages' => false];
         $rules[] = [['handle'], HandleValidator::class, 'reservedWords' => ['id', 'dateCreated', 'dateUpdated', 'uid', 'title']];
