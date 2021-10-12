@@ -650,6 +650,7 @@ class Sites extends Component
         $projectConfig = Craft::$app->getProjectConfig();
         $configData = [
             'siteGroup' => $groupRecord->uid,
+            'contentParentId' => $site->contentParentId,
             'name' => $site->name,
             'handle' => $site->handle,
             'language' => $site->language,
@@ -714,6 +715,7 @@ class Sites extends Component
             $siteRecord->groupId = $groupRecord['id'];
             $siteRecord->name = $data['name'];
             $siteRecord->handle = $data['handle'];
+            $siteRecord->contentParentId = $data['contentParentId'];
             $siteRecord->language = $data['language'];
             $siteRecord->hasUrls = $data['hasUrls'];
             $siteRecord->baseUrl = $data['baseUrl'];
@@ -774,12 +776,14 @@ class Sites extends Component
                 Category::class,
                 Tag::class,
             ];
+            
+            $primarySiteToUse = $site->contentParentId ? $site->contentParentId : $oldPrimarySiteId;
 
             foreach ($elementTypes as $elementType) {
                 $queue->push(new PropagateElements([
                     'elementType' => $elementType,
                     'criteria' => [
-                        'siteId' => $oldPrimarySiteId,
+                        'siteId' => $primarySiteToUse,
                         'status' => null,
                         'enabledForSite' => false
                     ],
@@ -1155,6 +1159,7 @@ class Sites extends Component
                     's.uid',
                     's.dateCreated',
                     's.dateUpdated',
+                    's.contentParentId',
                 ])
                 ->from(['{{%sites}} s'])
                 ->innerJoin('{{%sitegroups}} sg', '[[sg.id]] = [[s.groupId]]')

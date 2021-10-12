@@ -235,6 +235,19 @@ class SitesController extends Controller
                 ])
             ];
         }
+        
+        $parentOptions = [];
+        $parentOptions[] = [
+            'value' => '',
+            'label' => Craft::t('app', 'Primary')
+        ];
+
+        foreach (Craft::$app->sites->getAllSites() as $siteOption) {
+            $parentOptions[] = [
+                'value' => $siteOption->id,
+                'label' => $siteOption->name
+            ];
+        }
 
         return $this->renderTemplate('settings/sites/_edit', compact(
             'brandNewSite',
@@ -243,7 +256,8 @@ class SitesController extends Controller
             'site',
             'groupId',
             'groupOptions',
-            'languageOptions'
+            'languageOptions',
+            'parentOptions'
         ));
     }
 
@@ -269,6 +283,7 @@ class SitesController extends Controller
         $site->groupId = $request->getBodyParam('group');
         $site->name = $request->getBodyParam('name');
         $site->handle = $request->getBodyParam('handle');
+        $site->contentParentId = $request->getBodyParam('contentParentId');
         $site->language = $request->getBodyParam('language');
         $site->primary = (bool)$request->getBodyParam('primary');
         $site->hasUrls = (bool)$request->getBodyParam('hasUrls');
