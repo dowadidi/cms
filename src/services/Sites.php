@@ -715,12 +715,15 @@ class Sites extends Component
             $siteRecord->groupId = $groupRecord['id'];
             $siteRecord->name = $data['name'];
             $siteRecord->handle = $data['handle'];
-            $siteRecord->contentParentId = $data['contentParentId'];
             $siteRecord->language = $data['language'];
             $siteRecord->hasUrls = $data['hasUrls'];
             $siteRecord->baseUrl = $data['baseUrl'];
             $siteRecord->primary = $data['primary'];
             $siteRecord->sortOrder = $data['sortOrder'];
+
+            if (isset($data['contentParentId'])) {
+                $siteRecord->contentParentId = $data['contentParentId'];
+            }
 
             if ($siteRecord->dateDeleted) {
                 $siteRecord->restore();
