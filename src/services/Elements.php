@@ -51,6 +51,7 @@ use craft\queue\jobs\UpdateSearchIndex;
 use craft\records\Element as ElementRecord;
 use craft\records\Element_SiteSettings as Element_SiteSettingsRecord;
 use craft\records\StructureElement as StructureElementRecord;
+use craft\services\Sections as SectionService;
 use craft\validators\SlugValidator;
 use yii\base\Behavior;
 use yii\base\Component;
