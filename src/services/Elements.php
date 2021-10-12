@@ -535,7 +535,7 @@ class Elements extends Component
      * @throws \Throwable if reasons
      * @since 3.2.0
      */
-    public function resaveElements(ElementQueryInterface $query, bool $continueOnError = false, $skipRevisions = true, bool $updateSearchIndex = false)
+    public function resaveElements(ElementQueryInterface $query, bool $continueOnError = false, $skipRevisions = true, bool $updateSearchIndex = false, bool $tryDuplicate = false)
     {
         // Fire a 'beforeResaveElements' event
         if ($this->hasEventHandlers(self::EVENT_BEFORE_RESAVE_ELEMENTS)) {
@@ -591,6 +591,42 @@ class Elements extends Component
                     } catch (\Throwable $e) {
                         if (!$continueOnError) {
                             throw $e;
+                        }
+                        Craft::$app->getErrorHandler()->logException($e);
+                    }
+                }
+                
+                if ($tryDuplicate && get_class($element->type) == 'craft\models\EntryType') {
+                    try {
+                        $sitesService = Craft::$app->getSites();
+                        $sectionsService = new SectionService();
+                        $sectionSitesSettings = $sectionsService->getSectionSiteSettings($element->sectionId);
+
+                        foreach ($sectionSitesSettings as $siteSettings) {
+                            $sectionSite = $sitesService->getSiteById($siteSettings->siteId);
+                            if (isset($sectionSite->contentParentId) && $sectionSite->contentParentId != $sectionSite->id) {
+                                $copyContentFromEntries = Entry::find()
+                                    ->sectionId($element->sectionId)
+                                    ->siteId($sectionSite->contentParentId)
+                                    ->all();
+                                foreach ($copyContentFromEntries as $copyContentFrom) {
+                                    $entryToUpdate = Entry::find()
+                                        ->siteId($sectionSite->id)
+                                        ->id($copyContentFrom->id)
+                                        ->one();
+                                    if ($entryToUpdate) {
+                                        $this->duplicateElement($copyContentFrom,[
+                                            'siteId' => $sectionSite->id,
+                                            'uid' => $entryToUpdate->uid,
+                                            'id' => $copyContentFrom->id
+                                        ]);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        if (!$continueOnError) {
+                          throw $e;
                         }
                         Craft::$app->getErrorHandler()->logException($e);
                     }

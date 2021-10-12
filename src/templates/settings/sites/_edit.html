@@ -46,6 +46,16 @@
             errors: site.getErrors('handle'),
             required: true
         }) }}
+        
+        {{ forms.selectField({
+            label: "Copy content from"|t('app'),
+            instructions: "Assets, globals, tags and categories will be copied from this site."|t('app'),
+            id: 'contentParentId',
+            name: 'contentParentId',
+            value: site.contentParentId,
+            errors: site.getErrors('contentParentId'),
+            options: parentOptions
+        }) }}
 
         {% if not craft.app.i18n.getIsIntlLoaded() %}
             {% set languageWarning = 'Enable the [Intl extension]({link1}) or install additional [locale data files]({link2}) for more language options.'|t('app', {

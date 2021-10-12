@@ -57,7 +57,7 @@ class ResaveElements extends BaseJob
         };
 
         $elementsService->on(Elements::EVENT_BEFORE_RESAVE_ELEMENT, $callback);
-        $elementsService->resaveElements($query);
+        $elementsService->resaveElements($query, false, true, false, true);
         $elementsService->off(Elements::EVENT_BEFORE_RESAVE_ELEMENT, $callback);
     }
 
