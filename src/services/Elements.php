@@ -45,6 +45,7 @@ use craft\helpers\DateTimeHelper;
 use craft\helpers\Db;
 use craft\helpers\ElementHelper;
 use craft\helpers\StringHelper;
+use craft\models\Section;
 use craft\queue\jobs\FindAndReplace;
 use craft\queue\jobs\UpdateElementSlugsAndUris;
 use craft\queue\jobs\UpdateSearchIndex;
@@ -604,42 +605,6 @@ class Elements extends Component
                         Craft::$app->getErrorHandler()->logException($e);
                     }
                 }
-                
-                if ($tryDuplicate && get_class($element->type) == 'craft\models\EntryType') {
-                    try {
-                        $sitesService = Craft::$app->getSites();
-                        $sectionsService = new SectionService();
-                        $sectionSitesSettings = $sectionsService->getSectionSiteSettings($element->sectionId);
-
-                        foreach ($sectionSitesSettings as $siteSettings) {
-                            $sectionSite = $sitesService->getSiteById($siteSettings->siteId);
-                            if (isset($sectionSite->contentParentId) && $sectionSite->contentParentId != $sectionSite->id) {
-                                $copyContentFromEntries = Entry::find()
-                                    ->sectionId($element->sectionId)
-                                    ->siteId($sectionSite->contentParentId)
-                                    ->all();
-                                foreach ($copyContentFromEntries as $copyContentFrom) {
-                                    $entryToUpdate = Entry::find()
-                                        ->siteId($sectionSite->id)
-                                        ->id($copyContentFrom->id)
-                                        ->one();
-                                    if ($entryToUpdate) {
-                                        $this->duplicateElement($copyContentFrom,[
-                                            'siteId' => $sectionSite->id,
-                                            'uid' => $entryToUpdate->uid,
-                                            'id' => $copyContentFrom->id
-                                        ]);
-                                    }
-                                }
-                            }
-                        }
-                    } catch (\Throwable $e) {
-                        if (!$continueOnError) {
-                          throw $e;
-                        }
-                        Craft::$app->getErrorHandler()->logException($e);
-                    }
-                }
 
                 // Fire an 'afterResaveElement' event
                 if ($this->hasEventHandlers(self::EVENT_AFTER_RESAVE_ELEMENT)) {
@@ -661,6 +626,93 @@ class Elements extends Component
                 'query' => $query,
             ]));
         }
+
+        /* try {
+            foreach ($query->each() as $element) {
+                $element->setScenario(Element::SCENARIO_ESSENTIALS);
+                if ($tryDuplicate && get_class($element->type) == 'craft\models\EntryType') {
+                    try {
+                        $sitesService = Craft::$app->getSites();
+                        $sectionsService = new SectionService();
+                        $sectionToCheck = $sectionsService->getSectionById($element->sectionId);
+
+                        foreach ($sectionToCheck->siteSettings as $siteSettings) {
+                            $sectionSite = $sitesService->getSiteById($siteSettings->siteId);
+                            if (isset($sectionSite->contentParentId) && $sectionSite->contentParentId != $sectionSite->id) {
+                                $copyContentFromEntries = [];
+                                Craft::info($sectionToCheck->propagationMethod, 'NEWSITE_propagationMethod');
+                                Craft::info($sectionToCheck->type, 'NEWSITE_type');
+                                $copyContentFromEntries = Entry::find()
+                                    ->sectionId($element->sectionId)
+                                    ->siteId($sectionSite->contentParentId)
+                                    ->all();
+                                foreach ($copyContentFromEntries as $copyContentFrom) {
+                                    $entryToUpdate = Entry::find()
+                                        ->siteId($sectionSite->id)
+                                        ->id($copyContentFrom->id)
+                                        ->one();
+                                    Craft::info($entryToUpdate, 'NEWSITE_entryToUpdate');
+
+                                    //const PROPAGATION_METHOD_NONE = 'none';
+                                    //const PROPAGATION_METHOD_SITE_GROUP = 'siteGroup';
+                                    //const PROPAGATION_METHOD_LANGUAGE = 'language';
+                                    //const PROPAGATION_METHOD_ALL = 'all';
+
+                                    if ($entryToUpdate) {
+
+                                        $copyContentFrom->getFieldValues();
+                                        $mainClone = clone $copyContentFrom;
+                                        $mainClone->id = $entryToUpdate->id;
+                                        $mainClone->uid = $entryToUpdate->uid;
+                                        $mainClone->siteId = $entryToUpdate->siteId;
+                                        $mainClone->enabled = $copyContentFrom->enabled;
+                                        $mainClone->duplicateOf = null;
+
+                                        $transaction = Craft::$app->getDb()->beginTransaction();
+
+                                        $this->_saveElementInternal($mainClone, false, false);
+
+                                        if (
+                                            $copyContentFrom->structureId &&
+                                            $copyContentFrom->root &&
+                                            !$mainClone->root &&
+                                            $mainClone->structureId == $copyContentFrom->structureId
+                                        ) {
+                                            if ($copyContentFrom->level == 1) {
+                                                Craft::$app->getStructures()->moveAfter($copyContentFrom->structureId, $mainClone, $copyContentFrom, Structures::MODE_AUTO);
+                                            } else {
+                                                $parentId = $copyContentFrom
+                                                    ->getAncestors(1)
+                                                    ->select(['elements.id'])
+                                                    ->siteId($entryToUpdate->siteId)
+                                                    ->unique()
+                                                    ->anyStatus()
+                                                    ->scalar();
+                                                if ($parentId !== false) {
+                                                    Craft::$app->getStructures()->append($copyContentFrom->structureId, $mainClone, $parentId, Structures::MODE_AUTO);
+                                                } else {
+                                                    Craft::$app->getStructures()->appendToRoot($copyContentFrom->structureId, $mainClone, Structures::MODE_AUTO);
+                                                }
+                                            }
+                                        }
+
+                                        $transaction->commit();
+                                    }
+                                }
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        if (!$continueOnError) {
+                          throw $e;
+                        }
+                        Craft::$app->getErrorHandler()->logException($e);
+                    }
+                }
+            }
+        } catch (QueryAbortedException $e) {
+            // Fail silently
+        } */
+
     }
 
     /**
